@@ -1,15 +1,26 @@
+import os
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker, declarative_base
 
-DB_USER = "postgres"
-DB_PASSWORD = "cHIDHVIK09SQL"
-DB_HOST = "localhost"
-DB_PORT = "5432"
-DB_NAME = "Demo"
+# Read from environment variables (set in Cloud Run)
+DB_USER = os.getenv("DB_USER", "postgres")
+DB_PASSWORD = os.getenv("DB_PASSWORD", "password")
+DB_NAME = os.getenv("DB_NAME", "Demo")
+INSTANCE_CONNECTION_NAME = os.getenv("INSTANCE_CONNECTION_NAME")
 
-DATABASE_URL = f"postgresql://{DB_USER}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT}/{DB_NAME}"
+# Cloud SQL Unix socket path (VERY IMPORTANT)
+DB_HOST = f"/cloudsql/{INSTANCE_CONNECTION_NAME}"
 
-engine = create_engine(DATABASE_URL)
+# Final connection string (Cloud SQL format)
+DATABASE_URL = f"postgresql://{DB_USER}:{DB_PASSWORD}@/{DB_NAME}?host={DB_HOST}"
+
+# Create engine
+engine = create_engine(
+    DATABASE_URL,
+    pool_pre_ping=True,   # avoids stale connections
+    pool_size=5,
+    max_overflow=2
+)
 
 SessionLocal = sessionmaker(
     autocommit=False,
@@ -26,4 +37,3 @@ def get_db():
         yield db
     finally:
         db.close()
-
